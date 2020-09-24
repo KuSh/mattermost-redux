@@ -593,6 +593,7 @@ export type SamlSettings = {
     Enable: boolean;
     EnableSyncWithLdap: boolean;
     EnableSyncWithLdapIncludeAuth: boolean;
+    IgnoreGuestsLdapSync: boolean;
     Verify: boolean;
     Encrypt: boolean;
     SignRequest: boolean;
