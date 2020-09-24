@@ -89,6 +89,7 @@ import {
     GetFilteredUsersStatsOpts,
 } from 'types/users';
 import {$ID, RelationOneToOne} from 'types/utilities';
+import {ProductNotices} from 'types/product_notices';
 
 import {buildQueryString, isMinimumServerVersion} from 'utils/helpers';
 import {cleanUrlForLogging} from 'utils/sentry';
@@ -381,6 +382,10 @@ export default class Client4 {
 
     getGroupRoute(groupID: string) {
         return `${this.getGroupsRoute()}/${groupID}`;
+    }
+
+    getNoticesRoute() {
+        return `${this.getBaseRoute()}/system/notices`;
     }
 
     getCSRFFromCookie() {
@@ -749,7 +754,7 @@ export default class Client4 {
         );
     };
 
-    getProfilesInChannel = (channelId: string, page = 0, perPage = PER_PAGE_DEFAULT, sort = '') => {
+    getProfilesInChannel = (channelId: string, page = 0, perPage = PER_PAGE_DEFAULT, sort = '', options: {active?: boolean} = {}) => {
         this.trackEvent('api', 'api_profiles_get_in_channel', {channel_id: channelId});
 
         const serverVersion = this.getServerVersion();
@@ -760,7 +765,7 @@ export default class Client4 {
             queryStringObj = {in_channel: channelId, page, per_page: perPage};
         }
         return this.doFetch<UserProfile[]>(
-            `${this.getUsersRoute()}${buildQueryString(queryStringObj)}`,
+            `${this.getUsersRoute()}${buildQueryString({...queryStringObj, ...options})}`,
             {method: 'get'},
         );
     };
@@ -2770,6 +2775,32 @@ export default class Client4 {
         );
     };
 
+    uploadPublicLdapCertificate = (fileData: File) => {
+        const formData = new FormData();
+        formData.append('certificate', fileData);
+
+        return this.doFetch<StatusOK>(
+            `${this.getBaseRoute()}/ldap/certificate/public`,
+            {
+                method: 'post',
+                body: formData,
+            },
+        );
+    };
+
+    uploadPrivateLdapCertificate = (fileData: File) => {
+        const formData = new FormData();
+        formData.append('certificate', fileData);
+
+        return this.doFetch<StatusOK>(
+            `${this.getBaseRoute()}/ldap/certificate/private`,
+            {
+                method: 'post',
+                body: formData,
+            },
+        );
+    };
+
     uploadIdpSamlCertificate = (fileData: File) => {
         const formData = new FormData();
         formData.append('certificate', fileData);
@@ -2793,6 +2824,20 @@ export default class Client4 {
     deletePrivateSamlCertificate = () => {
         return this.doFetch<StatusOK>(
             `${this.getBaseRoute()}/saml/certificate/private`,
+            {method: 'delete'},
+        );
+    };
+
+    deletePublicLdapCertificate = () => {
+        return this.doFetch<StatusOK>(
+            `${this.getBaseRoute()}/ldap/certificate/public`,
+            {method: 'delete'},
+        );
+    };
+
+    deletePrivateLdapCertificate = () => {
+        return this.doFetch<StatusOK>(
+            `${this.getBaseRoute()}/ldap/certificate/private`,
             {method: 'delete'},
         );
     };
@@ -3296,6 +3341,20 @@ export default class Client4 {
         );
     };
 
+    getInProductNotices = (teamId: string, client: string, clientVersion: string) => {
+        return this.doFetch<ProductNotices>(
+            `${this.getNoticesRoute()}/${teamId}?client=${client}&clientVersion=${clientVersion}`,
+            {method: 'get'},
+        );
+    };
+
+    updateNoticesAsViewed = (noticeIds: string[]) => {
+        return this.doFetch<StatusOK>(
+            `${this.getNoticesRoute()}/view`,
+            {method: 'put', body: JSON.stringify(noticeIds)},
+        );
+    }
+
     // Client Helpers
 
     doFetch = async <T>(url: string, options: Options): Promise<T> => {
@@ -3384,6 +3443,30 @@ export default class Client4 {
         };
 
         rudderAnalytics.track('event', properties, options);
+    }
+
+    pageVisited(category: string, name: string) {
+        if (!this.isRudderKeySet) {
+            return;
+        }
+
+        rudderAnalytics.page(
+            category,
+            name,
+            {
+                path: '',
+                referrer: '',
+                search: '',
+                title: '',
+                url: '',
+            },
+            {
+                context: {
+                    ip: '0.0.0.0',
+                },
+                anonymousId: '00000000000000000000000000',
+            },
+        );
     }
 }
 
