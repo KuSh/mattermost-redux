@@ -6,6 +6,7 @@ import {ClusterInfo, AnalyticsRow} from 'types/admin';
 import {Audit} from 'types/audits';
 import {UserAutocomplete, AutocompleteSuggestion} from 'types/autocomplete';
 import {Bot, BotPatch} from 'types/bots';
+import {Product, Subscription, CloudCustomer, Address, CloudCustomerPatch, Invoice} from 'types/cloud';
 import {ChannelCategory, OrderedChannelCategories} from 'types/channel_categories';
 import {
     Channel,
@@ -386,6 +387,10 @@ export default class Client4 {
 
     getNoticesRoute() {
         return `${this.getBaseRoute()}/system/notices`;
+    }
+
+    getCloudRoute() {
+        return `${this.getBaseRoute()}/cloud`;
     }
 
     getCSRFFromCookie() {
@@ -3303,6 +3308,65 @@ export default class Client4 {
         );
     }
 
+    // Cloud routes
+    getCloudProducts = () => {
+        return this.doFetch<Product[]>(
+            `${this.getCloudRoute()}/products`, {method: 'get'},
+        );
+    };
+
+    createPaymentMethod = async () => {
+        return this.doFetch(
+            `${this.getCloudRoute()}/payment`,
+            {method: 'post'},
+        );
+    }
+
+    getCloudCustomer = () => {
+        return this.doFetch<CloudCustomer>(
+            `${this.getCloudRoute()}/customer`, {method: 'get'},
+        );
+    }
+
+    updateCloudCustomer = (customerPatch: CloudCustomerPatch) => {
+        return this.doFetch<CloudCustomer>(
+            `${this.getCloudRoute()}/customer`,
+            {method: 'put', body: JSON.stringify(customerPatch)},
+        );
+    }
+
+    updateCloudCustomerAddress = (address: Address) => {
+        return this.doFetch<CloudCustomer>(
+            `${this.getCloudRoute()}/customer/address`,
+            {method: 'put', body: JSON.stringify(address)},
+        );
+    }
+
+    confirmPaymentMethod = async (stripeSetupIntentID: string) => {
+        return this.doFetch(
+            `${this.getCloudRoute()}/payment/confirm`,
+            {method: 'post', body: JSON.stringify({stripe_setup_intent_id: stripeSetupIntentID})},
+        );
+    }
+
+    getSubscription = () => {
+        return this.doFetch<Subscription>(
+            `${this.getCloudRoute()}/subscription`,
+            {method: 'get'},
+        );
+    }
+
+    getInvoices = () => {
+        return this.doFetch<Invoice[]>(
+            `${this.getCloudRoute()}/subscription/invoices`,
+            {method: 'get'},
+        );
+    }
+
+    getInvoicePdfUrl = (invoiceId: string) => {
+        return `${this.getCloudRoute()}/subscription/invoices/${invoiceId}/pdf`;
+    }
+
     teamMembersMinusGroupMembers = (teamID: string, groupIDs: string[], page: number, perPage: number) => {
         const query = `group_ids=${groupIDs.join(',')}&page=${page}&per_page=${perPage}`;
         return this.doFetch<UsersWithGroupsAndCount>(
@@ -3459,6 +3523,8 @@ export default class Client4 {
                 search: '',
                 title: '',
                 url: '',
+                user_actual_role: this.userRoles && isSystemAdmin(this.userRoles) ? 'system_admin, system_user' : 'system_user',
+                user_actual_id: this.userId,
             },
             {
                 context: {
